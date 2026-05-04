@@ -1,6 +1,8 @@
-﻿using InternationalPaymentsAPI.Data;
+using InternationalPaymentsAPI.Data;
 using InternationalPaymentsAPI.DTOs;
+using InternationalPaymentsAPI.Extensions;
 using InternationalPaymentsAPI.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -8,6 +10,7 @@ namespace InternationalPaymentsAPI.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize]
     public class BeneficiaryController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
@@ -23,6 +26,12 @@ namespace InternationalPaymentsAPI.Controllers
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState);
+            }
+
+            int authenticatedCustomerId = User.GetCustomerId();
+            if (dto.customer_Id != authenticatedCustomerId)
+            {
+                return Forbid();
             }
 
             var customerExists = await _context.Customers
@@ -78,6 +87,11 @@ namespace InternationalPaymentsAPI.Controllers
                 });
             }
 
+            if (beneficiary.customer_Id != User.GetCustomerId())
+            {
+                return Forbid();
+            }
+
             beneficiary.beneficiary_Name = dto.beneficiary_Name;
             beneficiary.bank_Name = dto.bank_Name;
             beneficiary.account_Number = dto.account_Number;
@@ -108,6 +122,11 @@ namespace InternationalPaymentsAPI.Controllers
                 });
             }
 
+            if (beneficiary.customer_Id != User.GetCustomerId())
+            {
+                return Forbid();
+            }
+
             _context.Beneficiaries.Remove(beneficiary);
             await _context.SaveChangesAsync();
 
@@ -121,6 +140,11 @@ namespace InternationalPaymentsAPI.Controllers
         [HttpGet("customer/{customerId}")]
         public async Task<IActionResult> GetBeneficiariesByCustomer(int customerId)
         {
+            if (customerId != User.GetCustomerId())
+            {
+                return Forbid();
+            }
+
             var beneficiaries = await _context.Beneficiaries
                 .Where(b => b.customer_Id == customerId)
                 .Select(b => new BeneficiaryResponseDto
