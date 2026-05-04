@@ -10,7 +10,8 @@ namespace InternationalPaymentsAPI.DTOs
         [Required(ErrorMessage = "Last name field is empty")]
         public string last_Name { get; set; }
 
-        public int id_Number { get; set; }
+        [Required(ErrorMessage = "ID number field is empty")]
+        public string id_Number { get; set; }
 
         [EmailAddress]
         public string? email_Address { get; set; }
@@ -31,4 +32,4 @@ namespace InternationalPaymentsAPI.DTOs
         [Compare("password", ErrorMessage = "Passwords do not match")]
         public string confirm_Password { get; set; }
     }
-}
+} 

@@ -21,7 +21,9 @@ namespace InternationalPaymentsAPI.Models
         public string last_Name { get; set; }
 
         [Column("id_Number")]
-        public int id_Number { get; set; }
+        [Required(ErrorMessage = "ID number field is empty")]
+        [StringLength(13, ErrorMessage = "ID number must be exactly 13 digits")]
+        public string id_Number { get; set; }
 
         [EmailAddress]
         [StringLength(150)]
@@ -51,6 +53,9 @@ namespace InternationalPaymentsAPI.Models
         [Required]
         [Column("created_On")]
         public DateTime CreatedOn { get; set; } = DateTime.Now;
+
+        public ICollection<BeneficiaryModel> Beneficiaries { get; set; }
+        public ICollection<CustomerSessionModel> CustomerSessions { get; set; }
 
 
     }

@@ -120,14 +120,15 @@ namespace InternationalPaymentsAPI.Controllers
                     c.account_Number == dto.account_Number &&
                     c.password_Hash == hashedPassword);
 
-            if (customer == null)
+            var session = new CustomerSessionModel
             {
-                return Unauthorized(new LoginResponseDto
-                {
-                    success = false,
-                    message = "Invalid username, account number or password."
-                });
-            }
+                customer_Id = customer.customer_Id,
+                login_Time = DateTime.Now,
+                is_Active = true
+            };
+
+            _context.CustomerSessions.Add(session);
+            await _context.SaveChangesAsync();
 
             return Ok(new LoginResponseDto
             {
@@ -138,6 +139,34 @@ namespace InternationalPaymentsAPI.Controllers
                 username = customer.username,
                 account_Number = customer.account_Number,
                 preferred_Currency = customer.preferred_Currency
+            });
+        }
+        [HttpPost("logout/{customerId}")]
+        public async Task<IActionResult> Logout(int customerId)
+        {
+            var session = await _context.CustomerSessions
+                .Where(s => s.customer_Id == customerId && s.is_Active)
+                .OrderByDescending(s => s.login_Time)
+                .FirstOrDefaultAsync();
+
+            if (session == null)
+            {
+                return NotFound(new
+                {
+                    success = false,
+                    message = "No active session found."
+                });
+            }
+
+            session.logout_Time = DateTime.Now;
+            session.is_Active = false;
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new
+            {
+                success = true,
+                message = "Logout successful."
             });
         }
     }
