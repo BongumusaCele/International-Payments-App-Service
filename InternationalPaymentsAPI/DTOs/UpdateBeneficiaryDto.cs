@@ -5,6 +5,9 @@ namespace InternationalPaymentsAPI.DTOs
     public class UpdateBeneficiaryDto
     {
         [Required]
+        public int currency_Id { get; set; }
+
+        [Required]
         public string beneficiary_Name { get; set; }
 
         [Required]
@@ -13,10 +16,6 @@ namespace InternationalPaymentsAPI.DTOs
         [Required]
         public int account_Number { get; set; }
 
-        [Required]
-        public string swift_Code { get; set; }
-
-        [Required]
-        public string country { get; set; }
+        public string? country { get; set; }
     }
 }

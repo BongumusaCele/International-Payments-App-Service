@@ -12,6 +12,9 @@ namespace InternationalPaymentsAPI.Data
         public DbSet<CustomerModel> Customers { get; set; }
         public DbSet<BeneficiaryModel> Beneficiaries { get; set; }
         public DbSet<CustomerSessionModel> CustomerSessions { get; set; }
+        public DbSet<CurrencyModel> Currencies { get; set; }
+        public DbSet<PaymentModel> Payments { get; set; }
+        public DbSet<AuditLogModel> AuditLogs { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -40,8 +43,9 @@ namespace InternationalPaymentsAPI.Data
                 entity.Property(e => e.account_Number)
                     .IsRequired();
 
-                entity.Property(e => e.preferred_Currency)
-                    .HasMaxLength(50);
+                entity.HasOne(e => e.Currency)
+                    .WithMany()
+                    .HasForeignKey(e => e.currency_Id);
 
                 entity.Property(e => e.username)
                     .IsRequired()
@@ -94,16 +98,120 @@ namespace InternationalPaymentsAPI.Data
                     .IsRequired()
                     .HasMaxLength(20);
 
-                entity.Property(e => e.swift_Code)
-                    .IsRequired()
-                    .HasMaxLength(20);
-
                 entity.Property(e => e.country)
                     .HasMaxLength(150);
 
                 entity.HasOne(e => e.Customer)
                     .WithMany(c => c.Beneficiaries)
                     .HasForeignKey(e => e.customer_Id);
+
+                entity.HasOne(e => e.Currency)
+                    .WithMany()
+                    .HasForeignKey(e => e.currency_Id);
+            });
+
+            modelBuilder.Entity<CurrencyModel>(entity =>
+            {
+                entity.ToTable("tblCurrency");
+
+                entity.HasKey(e => e.currency_Id);
+
+                entity.Property(e => e.currency_Name)
+                    .IsRequired()
+                    .HasMaxLength(100);
+
+                entity.Property(e => e.currency_Code)
+                    .IsRequired()
+                    .HasMaxLength(10);
+
+                entity.Property(e => e.exchange_Rate)
+                    .IsRequired()
+                    .HasColumnType("decimal(18,4)");
+
+                entity.HasIndex(e => e.currency_Code)
+                    .IsUnique();
+            });
+            modelBuilder.Entity<PaymentModel>(entity =>
+            {
+                entity.ToTable("tblPayment");
+
+                entity.HasKey(e => e.payment_Id);
+
+                entity.Property(e => e.amount)
+                    .IsRequired()
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(e => e.exchange_Rate_Used)
+                    .IsRequired()
+                    .HasColumnType("decimal(18,4)");
+
+                entity.Property(e => e.converted_Amount)
+                    .IsRequired()
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(e => e.status)
+                    .IsRequired()
+                    .HasMaxLength(30)
+                    .HasDefaultValue("Pending");
+
+                entity.Property(e => e.payment_Provider)
+                    .IsRequired()
+                    .HasMaxLength(50)
+                    .HasDefaultValue("SWIFT");
+
+                entity.Property(e => e.swift_Code)
+                    .IsRequired()
+                    .HasMaxLength(20);
+
+                entity.Property(e => e.created_On)
+                    .IsRequired()
+                    .HasDefaultValueSql("GETDATE()");
+
+                entity.HasOne(e => e.Customer)
+                    .WithMany()
+                    .HasForeignKey(e => e.customer_Id)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(e => e.Beneficiary)
+                    .WithMany()
+                    .HasForeignKey(e => e.beneficiary_Id)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(e => e.FromCurrency)
+                    .WithMany()
+                    .HasForeignKey(e => e.from_Currency_Id)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(e => e.ToCurrency)
+                    .WithMany()
+                    .HasForeignKey(e => e.to_Currency_Id)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            modelBuilder.Entity<AuditLogModel>(entity =>
+            {
+                entity.ToTable("tblAuditLog");
+
+                entity.HasKey(e => e.audit_Id);
+
+                entity.Property(e => e.action_Type)
+                    .IsRequired()
+                    .HasMaxLength(100);
+
+                entity.Property(e => e.table_Name)
+                    .HasMaxLength(100);
+
+                entity.Property(e => e.details)
+                    .HasMaxLength(255);
+
+                entity.Property(e => e.created_On)
+                    .IsRequired()
+                    .HasDefaultValueSql("GETDATE()");
+
+                entity.HasOne(e => e.Customer)
+                    .WithMany()
+                    .HasForeignKey(e => e.customer_Id)
+                    .OnDelete(DeleteBehavior.Restrict);
             });
         }
     }

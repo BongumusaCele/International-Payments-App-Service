@@ -21,29 +21,27 @@ namespace InternationalPaymentsAPI.Controllers
         public async Task<IActionResult> AddBeneficiary(CreateBeneficiaryDto dto)
         {
             if (!ModelState.IsValid)
-            {
                 return BadRequest(ModelState);
-            }
 
             var customerExists = await _context.Customers
                 .AnyAsync(c => c.customer_Id == dto.customer_Id);
 
             if (!customerExists)
-            {
-                return NotFound(new
-                {
-                    success = false,
-                    message = "Customer not found."
-                });
-            }
+                return NotFound(new { success = false, message = "Customer not found." });
+
+            var currencyExists = await _context.Currencies
+                .AnyAsync(c => c.currency_Id == dto.currency_Id);
+
+            if (!currencyExists)
+                return NotFound(new { success = false, message = "Currency not found." });
 
             var beneficiary = new BeneficiaryModel
             {
                 customer_Id = dto.customer_Id,
+                currency_Id = dto.currency_Id,
                 beneficiary_Name = dto.beneficiary_Name,
                 bank_Name = dto.bank_Name,
                 account_Number = dto.account_Number,
-                swift_Code = dto.swift_Code,
                 country = dto.country
             };
 
@@ -62,26 +60,24 @@ namespace InternationalPaymentsAPI.Controllers
         public async Task<IActionResult> UpdateBeneficiary(int beneficiaryId, UpdateBeneficiaryDto dto)
         {
             if (!ModelState.IsValid)
-            {
                 return BadRequest(ModelState);
-            }
 
             var beneficiary = await _context.Beneficiaries
                 .FirstOrDefaultAsync(b => b.beneficiary_Id == beneficiaryId);
 
             if (beneficiary == null)
-            {
-                return NotFound(new
-                {
-                    success = false,
-                    message = "Beneficiary not found."
-                });
-            }
+                return NotFound(new { success = false, message = "Beneficiary not found." });
 
+            var currencyExists = await _context.Currencies
+                .AnyAsync(c => c.currency_Id == dto.currency_Id);
+
+            if (!currencyExists)
+                return NotFound(new { success = false, message = "Currency not found." });
+
+            beneficiary.currency_Id = dto.currency_Id;
             beneficiary.beneficiary_Name = dto.beneficiary_Name;
             beneficiary.bank_Name = dto.bank_Name;
             beneficiary.account_Number = dto.account_Number;
-            beneficiary.swift_Code = dto.swift_Code;
             beneficiary.country = dto.country;
 
             await _context.SaveChangesAsync();
@@ -100,13 +96,7 @@ namespace InternationalPaymentsAPI.Controllers
                 .FirstOrDefaultAsync(b => b.beneficiary_Id == beneficiaryId);
 
             if (beneficiary == null)
-            {
-                return NotFound(new
-                {
-                    success = false,
-                    message = "Beneficiary not found."
-                });
-            }
+                return NotFound(new { success = false, message = "Beneficiary not found." });
 
             _context.Beneficiaries.Remove(beneficiary);
             await _context.SaveChangesAsync();
@@ -122,15 +112,18 @@ namespace InternationalPaymentsAPI.Controllers
         public async Task<IActionResult> GetBeneficiariesByCustomer(int customerId)
         {
             var beneficiaries = await _context.Beneficiaries
+                .Include(b => b.Currency)
                 .Where(b => b.customer_Id == customerId)
                 .Select(b => new BeneficiaryResponseDto
                 {
                     beneficiary_Id = b.beneficiary_Id,
                     customer_Id = b.customer_Id,
+                    currency_Id = b.currency_Id,
+                    currency_Code = b.Currency.currency_Code,
+                    currency_Name = b.Currency.currency_Name,
                     beneficiary_Name = b.beneficiary_Name,
                     bank_Name = b.bank_Name,
                     account_Number = b.account_Number,
-                    swift_Code = b.swift_Code,
                     country = b.country
                 })
                 .ToListAsync();

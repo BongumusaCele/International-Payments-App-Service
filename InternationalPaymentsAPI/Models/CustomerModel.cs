@@ -34,9 +34,11 @@ namespace InternationalPaymentsAPI.Models
         [Column("account_Number")]
         public int account_Number { get; set; }
 
-        [StringLength(50)]
-        [Column("preferred_Currency")]
-        public string? preferred_Currency { get; set; }
+        [Required(ErrorMessage = "Currency field is required")]
+        [Column("currency_Id")]
+        public int currency_Id { get; set; }
+
+        public CurrencyModel Currency { get; set; }
 
         [Required(ErrorMessage = "Username field is empty")]
         [StringLength(100)]

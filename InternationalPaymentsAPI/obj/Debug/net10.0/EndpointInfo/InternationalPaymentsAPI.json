@@ -237,62 +237,38 @@
         }
       }
     },
-    "/api/Payment": {
+    "/api/Currency": {
       "get": {
         "tags": [
-          "Payment"
+          "Currency"
         ],
         "responses": {
           "200": {
-            "description": "OK",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "type": "string"
-                  }
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "type": "string"
-                  }
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "type": "string"
-                  }
-                }
-              }
-            }
+            "description": "OK"
           }
         }
-      },
+      }
+    },
+    "/api/Currency/create": {
       "post": {
         "tags": [
-          "Payment"
+          "Currency"
         ],
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
-                "type": "string"
+                "$ref": "#/components/schemas/CreateCurrencyDto"
               }
             },
             "text/json": {
               "schema": {
-                "type": "string"
+                "$ref": "#/components/schemas/CreateCurrencyDto"
               }
             },
             "application/*+json": {
               "schema": {
-                "type": "string"
+                "$ref": "#/components/schemas/CreateCurrencyDto"
               }
             }
           },
@@ -305,83 +281,26 @@
         }
       }
     },
-    "/api/Payment/{id}": {
-      "get": {
+    "/api/Payment/create": {
+      "post": {
         "tags": [
           "Payment"
-        ],
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "pattern": "^-?(?:0|[1-9]\\d*)$",
-              "type": [
-                "integer",
-                "string"
-              ],
-              "format": "int32"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "type": "string"
-                }
-              }
-            }
-          }
-        }
-      },
-      "put": {
-        "tags": [
-          "Payment"
-        ],
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "pattern": "^-?(?:0|[1-9]\\d*)$",
-              "type": [
-                "integer",
-                "string"
-              ],
-              "format": "int32"
-            }
-          }
         ],
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
-                "type": "string"
+                "$ref": "#/components/schemas/CreatePaymentDto"
               }
             },
             "text/json": {
               "schema": {
-                "type": "string"
+                "$ref": "#/components/schemas/CreatePaymentDto"
               }
             },
             "application/*+json": {
               "schema": {
-                "type": "string"
+                "$ref": "#/components/schemas/CreatePaymentDto"
               }
             }
           },
@@ -392,14 +311,16 @@
             "description": "OK"
           }
         }
-      },
-      "delete": {
+      }
+    },
+    "/api/Payment/audit/customer/{customerId}": {
+      "get": {
         "tags": [
           "Payment"
         ],
         "parameters": [
           {
-            "name": "id",
+            "name": "customerId",
             "in": "path",
             "required": true,
             "schema": {
@@ -425,15 +346,22 @@
       "CreateBeneficiaryDto": {
         "required": [
           "customer_Id",
+          "currency_Id",
           "beneficiary_Name",
           "bank_Name",
-          "account_Number",
-          "swift_Code",
-          "country"
+          "account_Number"
         ],
         "type": "object",
         "properties": {
           "customer_Id": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "currency_Id": {
             "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": [
               "integer",
@@ -455,11 +383,89 @@
             ],
             "format": "int32"
           },
+          "country": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "CreateCurrencyDto": {
+        "required": [
+          "currency_Name",
+          "currency_Code",
+          "exchange_Rate"
+        ],
+        "type": "object",
+        "properties": {
+          "currency_Name": {
+            "type": "string"
+          },
+          "currency_Code": {
+            "type": "string"
+          },
+          "exchange_Rate": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          }
+        }
+      },
+      "CreatePaymentDto": {
+        "required": [
+          "customer_Id",
+          "beneficiary_Id",
+          "amount",
+          "swift_Code"
+        ],
+        "type": "object",
+        "properties": {
+          "customer_Id": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "beneficiary_Id": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "amount": {
+            "minimum": 1,
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "payment_Reference": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "payment_Provider": {
+            "type": "string"
+          },
           "swift_Code": {
             "type": "string"
           },
-          "country": {
-            "type": "string"
+          "payment_Reason": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -467,7 +473,7 @@
         "required": [
           "username",
           "account_Number",
-          "password_Hash"
+          "password"
         ],
         "type": "object",
         "properties": {
@@ -482,7 +488,7 @@
             ],
             "format": "int32"
           },
-          "password_Hash": {
+          "password": {
             "type": "string"
           }
         }
@@ -491,8 +497,8 @@
         "required": [
           "first_Name",
           "last_Name",
-          "id_Number",
           "account_Number",
+          "currency_Id",
           "username",
           "password",
           "confirm_Password"
@@ -522,11 +528,13 @@
             ],
             "format": "int32"
           },
-          "preferred_Currency": {
+          "currency_Id": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": [
-              "null",
+              "integer",
               "string"
-            ]
+            ],
+            "format": "int32"
           },
           "username": {
             "type": "string"
@@ -541,14 +549,21 @@
       },
       "UpdateBeneficiaryDto": {
         "required": [
+          "currency_Id",
           "beneficiary_Name",
           "bank_Name",
-          "account_Number",
-          "swift_Code",
-          "country"
+          "account_Number"
         ],
         "type": "object",
         "properties": {
+          "currency_Id": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
           "beneficiary_Name": {
             "type": "string"
           },
@@ -563,11 +578,11 @@
             ],
             "format": "int32"
           },
-          "swift_Code": {
-            "type": "string"
-          },
           "country": {
-            "type": "string"
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       }
@@ -579,6 +594,9 @@
     },
     {
       "name": "Beneficiary"
+    },
+    {
+      "name": "Currency"
     },
     {
       "name": "Payment"

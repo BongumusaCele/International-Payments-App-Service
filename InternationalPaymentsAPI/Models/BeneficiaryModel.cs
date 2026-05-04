@@ -14,6 +14,10 @@ namespace InternationalPaymentsAPI.Models
         [Column("customer_Id")]
         public int customer_Id { get; set; }
 
+        [Required]
+        [Column("currency_Id")]
+        public int currency_Id { get; set; }
+
         [Required(ErrorMessage = "Beneficiary name field is empty")]
         [StringLength(100)]
         [Column("beneficiary_Name")]
@@ -29,14 +33,10 @@ namespace InternationalPaymentsAPI.Models
         [Column("account_Number")]
         public int account_Number { get; set; }
 
-
-        [Required(ErrorMessage = "SWIFT code field is empty")]
-        [Column("swift_Code")]
-        public string swift_Code { get; set; }
-
         [Column("country")]
         public string? country { get; set; }
 
         public CustomerModel Customer { get; set; }
+        public CurrencyModel Currency { get; set; }
     }
 }

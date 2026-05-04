@@ -8,6 +8,6 @@
         public string? full_Name { get; set; }
         public string? username { get; set; }
         public int? account_Number { get; set; }
-        public string? preferred_Currency { get; set; }
+        public int? currency_Id { get; set; }
     }
 }

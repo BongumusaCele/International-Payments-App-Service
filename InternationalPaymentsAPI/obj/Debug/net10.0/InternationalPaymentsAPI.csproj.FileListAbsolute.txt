@@ -84,3 +84,4 @@ C:\Users\zesan\Downloads\New folder\InternationalPaymentsAPI\obj\Debug\net10.0\r
 C:\Users\zesan\Downloads\New folder\InternationalPaymentsAPI\obj\Debug\net10.0\InternationalPaymentsAPI.pdb
 C:\Users\zesan\Downloads\New folder\InternationalPaymentsAPI\obj\Debug\net10.0\InternationalPaymentsAPI.genruntimeconfig.cache
 C:\Users\zesan\Downloads\New folder\InternationalPaymentsAPI\obj\Debug\net10.0\ref\InternationalPaymentsAPI.dll
+C:\Users\zesan\Downloads\New folder\InternationalPaymentsAPI\obj\Debug\net10.0\staticwebassets.upToDateCheck.txt

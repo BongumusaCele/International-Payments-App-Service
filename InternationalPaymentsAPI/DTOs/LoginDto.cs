@@ -4,14 +4,13 @@ namespace InternationalPaymentsAPI.DTOs
 {
     public class LoginDto
     {
-        [Required(ErrorMessage = "Username field is empty")]
+        [Required]
         public string username { get; set; }
 
-        [Required(ErrorMessage = "Account number field is empty")]
+        [Required]
         public int account_Number { get; set; }
 
-        [Required(ErrorMessage = "Password field is empty")]
-        [DataType(DataType.Password)]
-        public string password_Hash { get; set; }
+        [Required]
+        public string password { get; set; }
     }
 }
