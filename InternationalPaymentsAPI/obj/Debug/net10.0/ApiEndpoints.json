@@ -1,5 +1,23 @@
 [
   {
+    "ContainingType": "Program\u002B\u003C\u003Ec",
+    "Method": "\u003C\u003CMain\u003E$\u003Eb__0_5",
+    "RelativePath": "",
+    "HttpMethod": "GET",
+    "IsController": false,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": [
+      {
+        "Type": "System.String",
+        "MediaTypes": [
+          "text/plain"
+        ],
+        "StatusCode": 200
+      }
+    ]
+  },
+  {
     "ContainingType": "InternationalPaymentsAPI.Controllers.AuthController",
     "Method": "Login",
     "RelativePath": "api/Auth/login",
@@ -18,17 +36,11 @@
   {
     "ContainingType": "InternationalPaymentsAPI.Controllers.AuthController",
     "Method": "Logout",
-    "RelativePath": "api/Auth/logout/{customerId}",
+    "RelativePath": "api/Auth/logout",
     "HttpMethod": "POST",
     "IsController": true,
     "Order": 0,
-    "Parameters": [
-      {
-        "Name": "customerId",
-        "Type": "System.Int32",
-        "IsRequired": true
-      }
-    ],
+    "Parameters": [],
     "ReturnTypes": []
   },
   {
@@ -42,6 +54,22 @@
       {
         "Name": "dto",
         "Type": "InternationalPaymentsAPI.DTOs.RegisterDto",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "InternationalPaymentsAPI.Controllers.AuthController",
+    "Method": "VerifyMfa",
+    "RelativePath": "api/Auth/verify-mfa",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "dto",
+        "Type": "InternationalPaymentsAPI.DTOs.VerifyMfaDto",
         "IsRequired": true
       }
     ],
@@ -144,6 +172,22 @@
   },
   {
     "ContainingType": "InternationalPaymentsAPI.Controllers.PaymentController",
+    "Method": "GetPaymentById",
+    "RelativePath": "api/Payment/{paymentId}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "paymentId",
+        "Type": "System.Int32",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "InternationalPaymentsAPI.Controllers.PaymentController",
     "Method": "GetPaymentAuditByCustomerId",
     "RelativePath": "api/Payment/audit/customer/{customerId}",
     "HttpMethod": "GET",
@@ -169,6 +213,38 @@
       {
         "Name": "dto",
         "Type": "InternationalPaymentsAPI.DTOs.CreatePaymentDto",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "InternationalPaymentsAPI.Controllers.PaymentController",
+    "Method": "GetPaymentsByCustomer",
+    "RelativePath": "api/Payment/customer/{customerId}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "customerId",
+        "Type": "System.Int32",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "InternationalPaymentsAPI.Controllers.PaymentController",
+    "Method": "GetPaymentSummaryByCustomer",
+    "RelativePath": "api/Payment/summary/customer/{customerId}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "customerId",
+        "Type": "System.Int32",
         "IsRequired": true
       }
     ],

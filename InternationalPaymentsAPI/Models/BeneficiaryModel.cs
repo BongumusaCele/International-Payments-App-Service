@@ -29,9 +29,13 @@ namespace InternationalPaymentsAPI.Models
         public string bank_Name { get; set; }
 
         [Required(ErrorMessage = "Account number field is empty")]
-        [MaxLength(50)]
+        [StringLength(20)]
         [Column("account_Number")]
-        public int account_Number { get; set; }
+        public string account_Number { get; set; }
+
+        [StringLength(20)]
+        [Column("swift_Code")]
+        public string? swift_Code { get; set; }
 
         [Column("country")]
         public string? country { get; set; }

@@ -1,0 +1,124 @@
+name: Backend DevSecOps
+
+on:
+  push:
+    branches:
+      - main
+      - master
+      - develop
+  pull_request:
+    branches:
+      - main
+      - master
+      - develop
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  DOTNET_VERSION: 10.0.x
+  PROJECT_PATH: InternationalPaymentsAPI/InternationalPaymentsAPI.csproj
+
+jobs:
+  build-and-security:
+    name: Build and Dependency Security
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore dependencies
+        run: dotnet restore ${{ env.PROJECT_PATH }}
+
+      - name: Build backend
+        run: dotnet build ${{ env.PROJECT_PATH }} --configuration Release --no-restore
+
+      - name: Check NuGet packages for known vulnerabilities
+        run: dotnet list ${{ env.PROJECT_PATH }} package --vulnerable --include-transitive
+
+      - name: Verify security middleware remains configured
+        shell: pwsh
+        run: |
+          $program = Get-Content -Raw InternationalPaymentsAPI/Program.cs
+          $required = @(
+            'UseHttpsRedirection',
+            'UseHsts',
+            'AddRateLimiter',
+            'UseRateLimiter',
+            'UseAuthentication',
+            'UseAuthorization',
+            'X-Content-Type-Options',
+            'X-Frame-Options',
+            'Content-Security-Policy'
+          )
+
+          foreach ($pattern in $required) {
+            if ($program -notmatch [regex]::Escape($pattern)) {
+              throw "Missing required security configuration: $pattern"
+            }
+          }
+
+      - name: Upload backend artifact
+        run: dotnet publish ${{ env.PROJECT_PATH }} --configuration Release --no-build --output ./publish
+
+      - name: Store backend artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-publish
+          path: publish
+          if-no-files-found: error
+
+  codeql:
+    name: CodeQL SAST
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          languages: csharp
+
+      - name: Restore dependencies
+        run: dotnet restore ${{ env.PROJECT_PATH }}
+
+      - name: Build for CodeQL
+        run: dotnet build ${{ env.PROJECT_PATH }} --configuration Release --no-restore
+
+      - name: Analyze with CodeQL
+        uses: github/codeql-action/analyze@v4
+
+  dependency-review:
+    name: Pull Request Dependency Review
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    permissions:
+      contents: read
+      pull-requests: read
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Review dependency changes
+        uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: high

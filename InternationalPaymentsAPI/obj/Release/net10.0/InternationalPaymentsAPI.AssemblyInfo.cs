@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("InternationalPaymentsAPI")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Release")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+2a3aa4ab50d4cd7d888ae9bdc7220582b2763e31")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+9ce491cb60633b1c69dc33b32249ea06a95cdc68")]
 [assembly: System.Reflection.AssemblyProductAttribute("InternationalPaymentsAPI")]
 [assembly: System.Reflection.AssemblyTitleAttribute("InternationalPaymentsAPI")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

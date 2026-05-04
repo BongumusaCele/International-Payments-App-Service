@@ -1,8 +1,12 @@
-﻿using InternationalPaymentsAPI.Data;
+using InternationalPaymentsAPI.Data;
 using InternationalPaymentsAPI.DTOs;
+using InternationalPaymentsAPI.Extensions;
 using InternationalPaymentsAPI.Helpers;
 using InternationalPaymentsAPI.Models;
+using InternationalPaymentsAPI.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 
 namespace InternationalPaymentsAPI.Controllers
@@ -11,21 +15,29 @@ namespace InternationalPaymentsAPI.Controllers
     [Route("api/[controller]")]
     public class AuthController : ControllerBase
     {
-        private readonly ApplicationDbContext _context;
+        private const int MfaExpiryMinutes = 10;
+        private const int SessionExpiryHours = 8;
+        private const int MaxMfaAttempts = 5;
 
-        public AuthController(ApplicationDbContext context)
+        private readonly ApplicationDbContext _context;
+        private readonly IEmailSender _emailSender;
+        private readonly ILogger<AuthController> _logger;
+
+        public AuthController(ApplicationDbContext context, IEmailSender emailSender, ILogger<AuthController> logger)
         {
             _context = context;
+            _emailSender = emailSender;
+            _logger = logger;
         }
 
-        // ================= REGISTER =================
         [HttpPost("register")]
+        [AllowAnonymous]
+        [EnableRateLimiting("Auth")]
         public async Task<IActionResult> Register(RegisterDto dto)
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            // Email check (only if provided)
             if (!string.IsNullOrWhiteSpace(dto.email_Address))
             {
                 var emailExists = await _context.Customers
@@ -35,27 +47,29 @@ namespace InternationalPaymentsAPI.Controllers
                     return BadRequest(new { success = false, message = "Email already exists." });
             }
 
-            // Username check
             if (await _context.Customers.AnyAsync(c => c.username == dto.username))
                 return BadRequest(new { success = false, message = "Username already exists." });
 
-            // Account number check
             if (await _context.Customers.AnyAsync(c => c.account_Number == dto.account_Number))
                 return BadRequest(new { success = false, message = "Account number already exists." });
 
-            // ID check
             if (await _context.Customers.AnyAsync(c => c.id_Number == dto.id_Number))
                 return BadRequest(new { success = false, message = "ID number already exists." });
 
-            // Currency check
+            int currencyId = dto.currency_Id;
+            if (currencyId <= 0 && !string.IsNullOrWhiteSpace(dto.preferred_Currency))
+            {
+                currencyId = await _context.Currencies
+                    .Where(c => c.currency_Code == dto.preferred_Currency)
+                    .Select(c => c.currency_Id)
+                    .FirstOrDefaultAsync();
+            }
+
             var currencyExists = await _context.Currencies
-                .AnyAsync(c => c.currency_Id == dto.currency_Id);
+                .AnyAsync(c => c.currency_Id == currencyId);
 
             if (!currencyExists)
                 return BadRequest(new { success = false, message = "Invalid currency." });
-
-            // Hash password
-            string hashedPassword = PasswordHelper.HashPassword(dto.password);
 
             var customer = new CustomerModel
             {
@@ -64,10 +78,10 @@ namespace InternationalPaymentsAPI.Controllers
                 id_Number = dto.id_Number,
                 email_Address = dto.email_Address,
                 account_Number = dto.account_Number,
-                currency_Id = dto.currency_Id,
+                currency_Id = currencyId,
                 username = dto.username,
-                password_Hash = hashedPassword,
-                CreatedOn = DateTime.Now
+                password_Hash = PasswordHelper.HashPassword(dto.password),
+                CreatedOn = DateTime.UtcNow
             };
 
             _context.Customers.Add(customer);
@@ -82,36 +96,141 @@ namespace InternationalPaymentsAPI.Controllers
             });
         }
 
-        // ================= LOGIN =================
         [HttpPost("login")]
+        [AllowAnonymous]
+        [EnableRateLimiting("Auth")]
         public async Task<IActionResult> Login(LoginDto dto)
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            string hashedPassword = PasswordHelper.HashPassword(dto.password);
+            string? submittedPassword = dto.GetSubmittedPassword();
+            if (string.IsNullOrWhiteSpace(submittedPassword))
+            {
+                return BadRequest(new LoginResponseDto
+                {
+                    success = false,
+                    message = "Password is required."
+                });
+            }
 
             var customer = await _context.Customers
                 .FirstOrDefaultAsync(c =>
                     c.username == dto.username &&
-                    c.account_Number == dto.account_Number &&
-                    c.password_Hash == hashedPassword);
+                    c.account_Number == dto.account_Number);
 
             if (customer == null)
+            {
+                _logger.LogWarning("Login failed for username {Username} and account number {AccountNumber}: customer not found.", dto.username, dto.account_Number);
+                return Unauthorized(new LoginResponseDto
+                {
+                    success = false,
+                    message = "Invalid username, account number, or password."
+                });
+            }
+
+            if (!PasswordHelper.VerifyPassword(submittedPassword, customer.password_Hash, out bool needsRehash))
+            {
+                _logger.LogWarning("Login failed for customer {CustomerId}: invalid password.", customer.customer_Id);
+                return Unauthorized(new LoginResponseDto
+                {
+                    success = false,
+                    message = "Invalid username, account number, or password."
+                });
+            }
+
+            if (needsRehash)
+            {
+                customer.password_Hash = PasswordHelper.HashPassword(submittedPassword);
+            }
+
+            if (string.IsNullOrWhiteSpace(customer.email_Address))
+            {
+                _logger.LogWarning("Login failed for customer {CustomerId}: no email address for MFA.", customer.customer_Id);
+                return BadRequest(new LoginResponseDto
+                {
+                    success = false,
+                    message = "This account does not have an email address for MFA."
+                });
+            }
+
+            string otpCode = SecurityTokenHelper.CreateOtpCode();
+            var challenge = new MfaChallengeModel
+            {
+                mfa_Challenge_Id = Guid.NewGuid(),
+                customer_Id = customer.customer_Id,
+                otp_Code_Hash = SecurityTokenHelper.HashSecret(otpCode),
+                created_On = DateTime.UtcNow,
+                expires_On = DateTime.UtcNow.AddMinutes(MfaExpiryMinutes),
+                attempt_Count = 0
+            };
+
+            _context.MfaChallenges.Add(challenge);
+            await _context.SaveChangesAsync();
+
+            await _emailSender.SendOtpAsync(customer.email_Address, otpCode);
+            _logger.LogInformation("MFA OTP sent for customer {CustomerId} to {Email}.", customer.customer_Id, customer.email_Address);
+
+            return Ok(new LoginResponseDto
+            {
+                success = true,
+                requires_Mfa = true,
+                message = "Verification code sent to your email address.",
+                mfa_Challenge_Id = challenge.mfa_Challenge_Id,
+                customer_Id = customer.customer_Id,
+                username = customer.username
+            });
+        }
+
+        [HttpPost("verify-mfa")]
+        [AllowAnonymous]
+        [EnableRateLimiting("Auth")]
+        public async Task<IActionResult> VerifyMfa(VerifyMfaDto dto)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            var challenge = await _context.MfaChallenges
+                .Include(c => c.Customer)
+                .ThenInclude(c => c.Currency)
+                .FirstOrDefaultAsync(c => c.mfa_Challenge_Id == dto.mfa_Challenge_Id);
+
+            if (challenge == null ||
+                challenge.consumed_On != null ||
+                challenge.expires_On <= DateTime.UtcNow ||
+                challenge.attempt_Count >= MaxMfaAttempts)
             {
                 return Unauthorized(new LoginResponseDto
                 {
                     success = false,
-                    message = "Invalid username, account number or password."
+                    message = "Invalid or expired verification code."
                 });
             }
 
-            // Create session
+            if (!SecurityTokenHelper.SecretMatches(dto.otp_Code, challenge.otp_Code_Hash))
+            {
+                challenge.attempt_Count += 1;
+                await _context.SaveChangesAsync();
+
+                return Unauthorized(new LoginResponseDto
+                {
+                    success = false,
+                    message = "Invalid or expired verification code."
+                });
+            }
+
+            challenge.consumed_On = DateTime.UtcNow;
+
+            string sessionToken = SecurityTokenHelper.CreateSessionToken();
             var session = new CustomerSessionModel
             {
-                customer_Id = customer.customer_Id,
-                login_Time = DateTime.Now,
-                is_Active = true
+                customer_Id = challenge.customer_Id,
+                login_Time = DateTime.UtcNow,
+                is_Active = true,
+                session_Token_Hash = SecurityTokenHelper.HashSecret(sessionToken),
+                expires_On = DateTime.UtcNow.AddHours(SessionExpiryHours)
             };
 
             _context.CustomerSessions.Add(session);
@@ -120,23 +239,27 @@ namespace InternationalPaymentsAPI.Controllers
             return Ok(new LoginResponseDto
             {
                 success = true,
+                requires_Mfa = false,
                 message = "Login successful.",
-                customer_Id = customer.customer_Id,
-                full_Name = customer.first_Name + " " + customer.last_Name,
-                username = customer.username,
-                account_Number = customer.account_Number,
-                currency_Id = customer.currency_Id
+                token = sessionToken,
+                token_Expires_On = session.expires_On,
+                customer_Id = challenge.Customer.customer_Id,
+                full_Name = challenge.Customer.first_Name + " " + challenge.Customer.last_Name,
+                username = challenge.Customer.username,
+                account_Number = challenge.Customer.account_Number,
+                currency_Id = challenge.Customer.currency_Id,
+                preferred_Currency = challenge.Customer.Currency?.currency_Code
             });
         }
 
-        // ================= LOGOUT =================
-        [HttpPost("logout/{customerId}")]
-        public async Task<IActionResult> Logout(int customerId)
+        [HttpPost("logout")]
+        [Authorize]
+        public async Task<IActionResult> Logout()
         {
+            int sessionId = User.GetSessionId();
+
             var session = await _context.CustomerSessions
-                .Where(s => s.customer_Id == customerId && s.is_Active)
-                .OrderByDescending(s => s.login_Time)
-                .FirstOrDefaultAsync();
+                .FirstOrDefaultAsync(s => s.session_Id == sessionId && s.is_Active);
 
             if (session == null)
             {
@@ -147,7 +270,7 @@ namespace InternationalPaymentsAPI.Controllers
                 });
             }
 
-            session.logout_Time = DateTime.Now;
+            session.logout_Time = DateTime.UtcNow;
             session.is_Active = false;
 
             await _context.SaveChangesAsync();

@@ -9,7 +9,8 @@
         public string currency_Name { get; set; }
         public string beneficiary_Name { get; set; }
         public string bank_Name { get; set; }
-        public long account_Number { get; set; }
+        public string account_Number { get; set; }
+        public string? swift_Code { get; set; }
         public string? country { get; set; }
     }
 }

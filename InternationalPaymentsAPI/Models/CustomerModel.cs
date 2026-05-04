@@ -58,6 +58,7 @@ namespace InternationalPaymentsAPI.Models
 
         public ICollection<BeneficiaryModel> Beneficiaries { get; set; }
         public ICollection<CustomerSessionModel> CustomerSessions { get; set; }
+        public ICollection<MfaChallengeModel> MfaChallenges { get; set; }
 
 
     }

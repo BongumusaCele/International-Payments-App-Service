@@ -12,6 +12,7 @@ namespace InternationalPaymentsAPI.Data
         public DbSet<CustomerModel> Customers { get; set; }
         public DbSet<BeneficiaryModel> Beneficiaries { get; set; }
         public DbSet<CustomerSessionModel> CustomerSessions { get; set; }
+        public DbSet<MfaChallengeModel> MfaChallenges { get; set; }
         public DbSet<CurrencyModel> Currencies { get; set; }
         public DbSet<PaymentModel> Payments { get; set; }
         public DbSet<AuditLogModel> AuditLogs { get; set; }
@@ -75,8 +76,44 @@ namespace InternationalPaymentsAPI.Data
                 entity.Property(e => e.is_Active)
                     .IsRequired();
 
+                entity.Property(e => e.session_Token_Hash)
+                    .IsRequired()
+                    .HasMaxLength(128);
+
+                entity.Property(e => e.expires_On)
+                    .IsRequired();
+
+                entity.HasIndex(e => e.session_Token_Hash)
+                    .IsUnique();
+
                 entity.HasOne(e => e.Customer)
                     .WithMany(c => c.CustomerSessions)
+                    .HasForeignKey(e => e.customer_Id);
+            });
+
+            modelBuilder.Entity<MfaChallengeModel>(entity =>
+            {
+                entity.ToTable("tblMfaChallenge");
+
+                entity.HasKey(e => e.mfa_Challenge_Id);
+
+                entity.Property(e => e.otp_Code_Hash)
+                    .IsRequired()
+                    .HasMaxLength(128);
+
+                entity.Property(e => e.created_On)
+                    .IsRequired();
+
+                entity.Property(e => e.expires_On)
+                    .IsRequired();
+
+                entity.Property(e => e.attempt_Count)
+                    .IsRequired();
+
+                entity.HasIndex(e => e.customer_Id);
+
+                entity.HasOne(e => e.Customer)
+                    .WithMany(c => c.MfaChallenges)
                     .HasForeignKey(e => e.customer_Id);
             });
 
@@ -96,6 +133,9 @@ namespace InternationalPaymentsAPI.Data
 
                 entity.Property(e => e.account_Number)
                     .IsRequired()
+                    .HasMaxLength(20);
+
+                entity.Property(e => e.swift_Code)
                     .HasMaxLength(20);
 
                 entity.Property(e => e.country)

@@ -13,6 +13,25 @@
     }
   ],
   "paths": {
+    "/": {
+      "get": {
+        "tags": [
+          "InternationalPaymentsAPI"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/Auth/register": {
       "post": {
         "tags": [
@@ -77,25 +96,42 @@
         }
       }
     },
-    "/api/Auth/logout/{customerId}": {
+    "/api/Auth/verify-mfa": {
       "post": {
         "tags": [
           "Auth"
         ],
-        "parameters": [
-          {
-            "name": "customerId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "pattern": "^-?(?:0|[1-9]\\d*)$",
-              "type": [
-                "integer",
-                "string"
-              ],
-              "format": "int32"
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifyMfaDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifyMfaDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifyMfaDto"
+              }
             }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
           }
+        }
+      }
+    },
+    "/api/Auth/logout": {
+      "post": {
+        "tags": [
+          "Auth"
         ],
         "responses": {
           "200": {
@@ -281,6 +317,87 @@
         }
       }
     },
+    "/api/Payment/customer/{customerId}": {
+      "get": {
+        "tags": [
+          "Payment"
+        ],
+        "parameters": [
+          {
+            "name": "customerId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/Payment/{paymentId}": {
+      "get": {
+        "tags": [
+          "Payment"
+        ],
+        "parameters": [
+          {
+            "name": "paymentId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/Payment/summary/customer/{customerId}": {
+      "get": {
+        "tags": [
+          "Payment"
+        ],
+        "parameters": [
+          {
+            "name": "customerId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/api/Payment/create": {
       "post": {
         "tags": [
@@ -346,7 +463,6 @@
       "CreateBeneficiaryDto": {
         "required": [
           "customer_Id",
-          "currency_Id",
           "beneficiary_Name",
           "bank_Name",
           "account_Number"
@@ -364,6 +480,7 @@
           "currency_Id": {
             "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": [
+              "null",
               "integer",
               "string"
             ],
@@ -376,12 +493,17 @@
             "type": "string"
           },
           "account_Number": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "maxLength": 20,
+            "minLength": 0,
+            "type": "string"
+          },
+          "swift_Code": {
+            "maxLength": 20,
+            "minLength": 0,
             "type": [
-              "integer",
+              "null",
               "string"
-            ],
-            "format": "int32"
+            ]
           },
           "country": {
             "type": [
@@ -472,8 +594,7 @@
       "LoginDto": {
         "required": [
           "username",
-          "account_Number",
-          "password"
+          "account_Number"
         ],
         "type": "object",
         "properties": {
@@ -489,7 +610,16 @@
             "format": "int32"
           },
           "password": {
-            "type": "string"
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "password_Hash": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -536,6 +666,12 @@
             ],
             "format": "int32"
           },
+          "preferred_Currency": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
           "username": {
             "type": "string"
           },
@@ -549,7 +685,6 @@
       },
       "UpdateBeneficiaryDto": {
         "required": [
-          "currency_Id",
           "beneficiary_Name",
           "bank_Name",
           "account_Number"
@@ -559,6 +694,7 @@
           "currency_Id": {
             "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": [
+              "null",
               "integer",
               "string"
             ],
@@ -571,12 +707,17 @@
             "type": "string"
           },
           "account_Number": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "maxLength": 20,
+            "minLength": 0,
+            "type": "string"
+          },
+          "swift_Code": {
+            "maxLength": 20,
+            "minLength": 0,
             "type": [
-              "integer",
+              "null",
               "string"
-            ],
-            "format": "int32"
+            ]
           },
           "country": {
             "type": [
@@ -585,10 +726,31 @@
             ]
           }
         }
+      },
+      "VerifyMfaDto": {
+        "required": [
+          "mfa_Challenge_Id",
+          "otp_Code"
+        ],
+        "type": "object",
+        "properties": {
+          "mfa_Challenge_Id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "otp_Code": {
+            "maxLength": 6,
+            "minLength": 6,
+            "type": "string"
+          }
+        }
       }
     }
   },
   "tags": [
+    {
+      "name": "InternationalPaymentsAPI"
+    },
     {
       "name": "Auth"
     },
