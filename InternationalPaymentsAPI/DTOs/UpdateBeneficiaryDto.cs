@@ -11,7 +11,8 @@ namespace InternationalPaymentsAPI.DTOs
         public string bank_Name { get; set; }
 
         [Required]
-        public int account_Number { get; set; }
+        [StringLength(20)]
+        public string account_Number { get; set; }
 
         [Required]
         public string swift_Code { get; set; }

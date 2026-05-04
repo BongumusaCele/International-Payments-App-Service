@@ -10,7 +10,7 @@
 
         public string bank_Name { get; set; }
 
-        public int account_Number { get; set; }
+        public string account_Number { get; set; }
 
         public string swift_Code { get; set; }
 

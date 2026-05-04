@@ -13,6 +13,25 @@
     }
   ],
   "paths": {
+    "/": {
+      "get": {
+        "tags": [
+          "InternationalPaymentsAPI"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/Auth/register": {
       "post": {
         "tags": [
@@ -574,6 +593,9 @@
     }
   },
   "tags": [
+    {
+      "name": "InternationalPaymentsAPI"
+    },
     {
       "name": "Auth"
     },
