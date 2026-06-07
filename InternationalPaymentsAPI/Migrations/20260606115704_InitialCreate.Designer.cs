@@ -4,6 +4,7 @@ using InternationalPaymentsAPI.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace InternationalPaymentsAPI.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260606115704_InitialCreate")]
+    partial class InitialCreate
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -205,44 +208,6 @@ namespace InternationalPaymentsAPI.Migrations
                     b.ToTable("tblEmployee", (string)null);
                 });
 
-            modelBuilder.Entity("InternationalPaymentsAPI.Models.EmployeeSessionModel", b =>
-                {
-                    b.Property<int>("employee_Session_Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("employee_Session_Id"));
-
-                    b.Property<int>("employee_Id")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("expires_On")
-                        .HasColumnType("datetime2");
-
-                    b.Property<bool>("is_Active")
-                        .HasColumnType("bit");
-
-                    b.Property<DateTime>("login_Time")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime?>("logout_Time")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("session_Token_Hash")
-                        .IsRequired()
-                        .HasMaxLength(128)
-                        .HasColumnType("nvarchar(128)");
-
-                    b.HasKey("employee_Session_Id");
-
-                    b.HasIndex("employee_Id");
-
-                    b.HasIndex("session_Token_Hash")
-                        .IsUnique();
-
-                    b.ToTable("tblEmployeeSession", (string)null);
-                });
-
             modelBuilder.Entity("InternationalPaymentsAPI.Models.MfaChallengeModel", b =>
                 {
                     b.Property<Guid>("mfa_Challenge_Id")
@@ -313,15 +278,6 @@ namespace InternationalPaymentsAPI.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
-                    b.Property<int?>("rejected_By_Employee_Id")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime?>("rejected_On")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("rejection_Reason")
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<string>("status")
                         .IsRequired()
                         .HasMaxLength(30)
@@ -372,17 +328,6 @@ namespace InternationalPaymentsAPI.Migrations
                         .IsRequired();
 
                     b.Navigation("Customer");
-                });
-
-            modelBuilder.Entity("InternationalPaymentsAPI.Models.EmployeeSessionModel", b =>
-                {
-                    b.HasOne("InternationalPaymentsAPI.Models.EmployeeModel", "Employee")
-                        .WithMany()
-                        .HasForeignKey("employee_Id")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("Employee");
                 });
 
             modelBuilder.Entity("InternationalPaymentsAPI.Models.MfaChallengeModel", b =>

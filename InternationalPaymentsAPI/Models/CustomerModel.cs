@@ -13,17 +13,17 @@ namespace InternationalPaymentsAPI.Models
         [Required(ErrorMessage = "First name field is empty")]
         [StringLength(150)]
         [Column("first_Name")]
-        public string first_Name { get; set; }
+        public string first_Name { get; set; } = string.Empty;
 
         [Required(ErrorMessage = "Last name field is empty")]
         [StringLength(150)]
         [Column("last_Name")]
-        public string last_Name { get; set; }
+        public string last_Name { get; set; } = string.Empty;
 
         [Column("id_Number")]
         [Required(ErrorMessage = "ID number field is empty")]
         [StringLength(13, ErrorMessage = "ID number must be exactly 13 digits")]
-        public string id_Number { get; set; }
+        public string id_Number { get; set; } = string.Empty;
 
         [EmailAddress]
         [StringLength(150)]
@@ -41,13 +41,13 @@ namespace InternationalPaymentsAPI.Models
         [Required(ErrorMessage = "Username field is empty")]
         [StringLength(100)]
         [Column("username")]
-        public string username { get; set; }
+        public string username { get; set; } = string.Empty;
 
 
         [Required(ErrorMessage = " Password field is empty")]
         [Column("password_hash")]
         [DataType(DataType.Password)]
-        public string password_Hash { get; set; }
+        public string password_Hash { get; set; } = string.Empty;
 
 
         [Required]
@@ -55,8 +55,13 @@ namespace InternationalPaymentsAPI.Models
         public DateTime CreatedOn { get; set; } = DateTime.Now;
 
         public ICollection<BeneficiaryModel> Beneficiaries { get; set; }
+           = new List<BeneficiaryModel>();
+
         public ICollection<CustomerSessionModel> CustomerSessions { get; set; }
+            = new List<CustomerSessionModel>();
+
         public ICollection<MfaChallengeModel> MfaChallenges { get; set; }
+            = new List<MfaChallengeModel>();
 
 
     }

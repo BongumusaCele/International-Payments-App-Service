@@ -13,6 +13,9 @@ namespace InternationalPaymentsAPI.Data
         public DbSet<BeneficiaryModel> Beneficiaries { get; set; }
         public DbSet<CustomerSessionModel> CustomerSessions { get; set; }
         public DbSet<MfaChallengeModel> MfaChallenges { get; set; }
+        public DbSet<PaymentModel> Payments { get; set; }
+        public DbSet<EmployeeModel> Employees { get; set; }
+        public DbSet<EmployeeSessionModel> EmployeeSessions { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -141,6 +144,84 @@ namespace InternationalPaymentsAPI.Data
                 entity.HasOne(e => e.Customer)
                     .WithMany(c => c.Beneficiaries)
                     .HasForeignKey(e => e.customer_Id);
+
+
+            });
+            modelBuilder.Entity<EmployeeModel>(entity =>
+            {
+                entity.ToTable("tblEmployee");
+                entity.HasKey(e => e.employee_Id);
+
+                entity.Property(e => e.username)
+                    .IsRequired()
+                    .HasMaxLength(100);
+
+                entity.Property(e => e.password_Hash)
+                    .IsRequired();
+
+                entity.Property(e => e.full_Name)
+                    .IsRequired()
+                    .HasMaxLength(150);
+
+                entity.HasIndex(e => e.username).IsUnique();
+            });
+
+            modelBuilder.Entity<PaymentModel>(entity =>
+            {
+                entity.ToTable("tblPayment");
+                entity.HasKey(e => e.payment_Id);
+
+                entity.Property(e => e.amount)
+                    .HasColumnType("decimal(18,2)")
+                    .IsRequired();
+
+                entity.Property(e => e.currency)
+                    .IsRequired()
+                    .HasMaxLength(3);
+
+                entity.Property(e => e.provider)
+                    .IsRequired()
+                    .HasMaxLength(50);
+
+                entity.Property(e => e.swift_Code)
+                    .IsRequired()
+                    .HasMaxLength(20);
+
+                entity.Property(e => e.status)
+                    .IsRequired()
+                    .HasMaxLength(30);
+
+                entity.HasOne(e => e.Customer)
+                    .WithMany()
+                    .HasForeignKey(e => e.customer_Id)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(e => e.Beneficiary)
+                    .WithMany()
+                    .HasForeignKey(e => e.beneficiary_Id)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(e => e.VerifiedByEmployee)
+                    .WithMany()
+                    .HasForeignKey(e => e.verified_By_Employee_Id)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+            modelBuilder.Entity<EmployeeSessionModel>(entity =>
+            {
+                entity.ToTable("tblEmployeeSession");
+                entity.HasKey(e => e.employee_Session_Id);
+
+                entity.Property(e => e.session_Token_Hash)
+                    .IsRequired()
+                    .HasMaxLength(128);
+
+                entity.HasIndex(e => e.session_Token_Hash)
+                    .IsUnique();
+
+                entity.HasOne(e => e.Employee)
+                    .WithMany()
+                    .HasForeignKey(e => e.employee_Id)
+                    .OnDelete(DeleteBehavior.Restrict);
             });
         }
     }
