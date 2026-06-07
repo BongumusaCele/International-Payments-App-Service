@@ -1,4 +1,5 @@
-﻿using InternationalPaymentsAPI.Data;
+﻿using InternationalPaymentsAPI.Auth;
+using InternationalPaymentsAPI.Data;
 using InternationalPaymentsAPI.DTOs;
 using InternationalPaymentsAPI.Helpers;
 using InternationalPaymentsAPI.Models;
@@ -82,8 +83,43 @@ namespace InternationalPaymentsAPI.Controllers
                 full_Name = employee.full_Name
             });
         }
-        
-        
-       
+
+        [HttpPost("logout")]
+        [Authorize(AuthenticationSchemes = EmployeeAuthenticationHandler.SchemeName)]
+        public async Task<IActionResult> Logout()
+        {
+            int employeeId = int.Parse(
+                User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)!.Value);
+
+            int sessionId = int.Parse(
+                User.FindFirst("employee_session_id")!.Value);
+
+            var session = await _context.EmployeeSessions
+                .FirstOrDefaultAsync(s =>
+                    s.employee_Session_Id == sessionId &&
+                    s.employee_Id == employeeId &&
+                    s.is_Active);
+
+            if (session == null)
+            {
+                return NotFound(new
+                {
+                    success = false,
+                    message = "Active session not found."
+                });
+            }
+
+            session.is_Active = false;
+            session.logout_Time = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new
+            {
+                success = true,
+                message = "Employee logged out successfully."
+            });
+        }
+
     }
 }
