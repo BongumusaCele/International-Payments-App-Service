@@ -82,27 +82,8 @@ namespace InternationalPaymentsAPI.Controllers
                 full_Name = employee.full_Name
             });
         }
-        [HttpGet("generate-hash")]
-        [AllowAnonymous]
-        public IActionResult GenerateHash(string password)
-        {
-            if (string.IsNullOrWhiteSpace(password))
-            {
-                return BadRequest(new
-                {
-                    success = false,
-                    message = "Password is required."
-                });
-            }
-
-            string hash = PasswordHelper.HashPassword(password);
-
-            return Ok(new
-            {
-                password,
-                hash
-            });
-        }
+        
+        
        
     }
 }
