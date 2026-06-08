@@ -1,5 +1,4 @@
 ﻿using InternationalPaymentsAPI.Data;
-using Microsoft.EntityFrameworkCore;
 
 namespace InternationalPaymentsAPI.Services
 {
@@ -25,6 +24,7 @@ namespace InternationalPaymentsAPI.Services
             // Simulate SWIFT submission
             payment.status = "SubmittedToSwift";
             payment.submitted_To_Swift_On = DateTime.UtcNow;
+            payment.updated_On = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();
 

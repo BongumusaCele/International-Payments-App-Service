@@ -22,19 +22,25 @@ namespace InternationalPaymentsAPI.Controllers
             _swiftService = swiftService;
         }
 
+        [HttpGet]
         [HttpGet("pending")]
-        public async Task<IActionResult> GetPendingPayments()
+        public async Task<IActionResult> GetReviewQueue()
         {
+            var reviewStatuses = new[] { "Pending", "Verified", "SubmittedToSwift", "Rejected" };
+
             var payments = await _context.Payments
+                .Include(p => p.Customer)
                 .Include(p => p.Beneficiary)
                 .Include(p => p.FromCurrency)
                 .Include(p => p.ToCurrency)
-                .Where(p => p.status == "Pending")
-                .OrderBy(p => p.created_On)
+                .Where(p => reviewStatuses.Contains(p.status))
+                .OrderByDescending(p => p.created_On)
                 .Select(p => new PaymentResponseDto
                 {
                     payment_Id = p.payment_Id,
                     customer_Id = p.customer_Id,
+                    customer_Name = p.Customer.first_Name + " " + p.Customer.last_Name,
+                    customer_Account_Number = p.Customer.account_Number,
                     beneficiary_Id = p.beneficiary_Id,
                     amount = p.amount,
                     from_Currency = p.FromCurrency.currency_Code,
@@ -44,12 +50,14 @@ namespace InternationalPaymentsAPI.Controllers
                     beneficiary_Name = p.Beneficiary.beneficiary_Name,
                     recipient_Account_Number = p.Beneficiary.account_Number,
                     recipient_Bank_Name = p.Beneficiary.bank_Name,
+                    recipient_Country = p.Beneficiary.country,
                     swift_Code = p.swift_Code,
                     payment_Provider = p.payment_Provider,
                     payment_Reference = p.payment_Reference,
                     payment_Reason = p.payment_Reason,
                     status = p.status,
                     created_On = p.created_On,
+                    updated_On = p.updated_On,
                     verified_On = p.verified_On,
                     submitted_To_Swift_On = p.submitted_To_Swift_On,
                     rejected_On = p.rejected_On,

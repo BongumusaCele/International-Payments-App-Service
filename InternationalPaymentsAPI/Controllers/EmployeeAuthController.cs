@@ -55,9 +55,6 @@ namespace InternationalPaymentsAPI.Controllers
 
             string sessionToken = SecurityTokenHelper.CreateSessionToken();
 
-            Console.WriteLine($"LOGIN TOKEN : {sessionToken}");
-            Console.WriteLine($"LOGIN HASH  : {SecurityTokenHelper.HashSecret(sessionToken)}");
-
             var session = new EmployeeSessionModel
             {
                 employee_Id = employee.employee_Id,
@@ -66,8 +63,6 @@ namespace InternationalPaymentsAPI.Controllers
                 session_Token_Hash = SecurityTokenHelper.HashSecret(sessionToken),
                 expires_On = DateTime.UtcNow.AddHours(SessionExpiryHours)
             };
-
-            Console.WriteLine($"STORED HASH : {session.session_Token_Hash}");
 
             _context.EmployeeSessions.Add(session);
             await _context.SaveChangesAsync();
@@ -88,11 +83,8 @@ namespace InternationalPaymentsAPI.Controllers
         [Authorize(AuthenticationSchemes = EmployeeAuthenticationHandler.SchemeName)]
         public async Task<IActionResult> Logout()
         {
-            int employeeId = int.Parse(
-                User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)!.Value);
-
-            int sessionId = int.Parse(
-                User.FindFirst("employee_session_id")!.Value);
+            int employeeId = int.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)!.Value);
+            int sessionId = int.Parse(User.FindFirst("employee_session_id")!.Value);
 
             var session = await _context.EmployeeSessions
                 .FirstOrDefaultAsync(s =>
@@ -120,9 +112,5 @@ namespace InternationalPaymentsAPI.Controllers
                 message = "Employee logged out successfully."
             });
         }
-
-       
-        
-
     }
 }

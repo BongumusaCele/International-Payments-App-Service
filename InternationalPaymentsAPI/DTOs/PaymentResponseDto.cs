@@ -7,6 +7,8 @@
 
         public int payment_Id { get; set; }
         public int customer_Id { get; set; }
+        public string? customer_Name { get; set; }
+        public int? customer_Account_Number { get; set; }
         public int beneficiary_Id { get; set; }
 
         public decimal amount { get; set; }
@@ -18,6 +20,7 @@
         public string? beneficiary_Name { get; set; }
         public string? recipient_Account_Number { get; set; }
         public string? recipient_Bank_Name { get; set; }
+        public string? recipient_Country { get; set; }
         public string swift_Code { get; set; } = string.Empty;
         public string? payment_Reference { get; set; }
         public string payment_Provider { get; set; } = "SWIFT";
