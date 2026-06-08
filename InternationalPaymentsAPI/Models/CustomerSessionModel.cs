@@ -12,6 +12,10 @@
 
         public bool is_Active { get; set; }
 
+        public string session_Token_Hash { get; set; }
+
+        public DateTime expires_On { get; set; }
+
         public CustomerModel Customer { get; set; }
     }
 }

@@ -1,6 +1,8 @@
 ﻿using InternationalPaymentsAPI.Data;
 using InternationalPaymentsAPI.DTOs;
+using InternationalPaymentsAPI.Extensions;
 using InternationalPaymentsAPI.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -8,6 +10,7 @@ namespace InternationalPaymentsAPI.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize]
     public class PaymentController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
@@ -23,9 +26,11 @@ namespace InternationalPaymentsAPI.Controllers
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            if (string.IsNullOrWhiteSpace(dto.swift_Code) ||
-                dto.swift_Code.Length < 8 ||
-                dto.swift_Code.Length > 11)
+            int authenticatedCustomerId = User.GetCustomerId();
+            if (dto.customer_Id != authenticatedCustomerId)
+                return Forbid();
+
+            if (string.IsNullOrWhiteSpace(dto.swift_Code) || dto.swift_Code.Length < 8 || dto.swift_Code.Length > 11)
             {
                 return BadRequest(new
                 {
@@ -43,9 +48,7 @@ namespace InternationalPaymentsAPI.Controllers
 
             var beneficiary = await _context.Beneficiaries
                 .Include(b => b.Currency)
-                .FirstOrDefaultAsync(b =>
-                    b.beneficiary_Id == dto.beneficiary_Id &&
-                    b.customer_Id == dto.customer_Id);
+                .FirstOrDefaultAsync(b => b.beneficiary_Id == dto.beneficiary_Id && b.customer_Id == dto.customer_Id);
 
             if (beneficiary == null)
                 return NotFound(new { success = false, message = "Beneficiary not found for this customer." });
@@ -56,16 +59,9 @@ namespace InternationalPaymentsAPI.Controllers
             if (fromCurrency == null || toCurrency == null)
                 return BadRequest(new { success = false, message = "Currency information is missing." });
 
-            decimal convertedAmount;
-
-            if (fromCurrency.currency_Id == toCurrency.currency_Id)
-            {
-                convertedAmount = dto.amount;
-            }
-            else
-            {
-                convertedAmount = dto.amount / toCurrency.exchange_Rate;
-            }
+            decimal convertedAmount = fromCurrency.currency_Id == toCurrency.currency_Id
+                ? dto.amount
+                : dto.amount / toCurrency.exchange_Rate;
 
             var payment = new PaymentModel
             {
@@ -76,17 +72,12 @@ namespace InternationalPaymentsAPI.Controllers
                 amount = dto.amount,
                 exchange_Rate_Used = toCurrency.exchange_Rate,
                 converted_Amount = Math.Round(convertedAmount, 2),
-
-                payment_Provider = string.IsNullOrWhiteSpace(dto.payment_Provider)
-                    ? "SWIFT"
-                    : dto.payment_Provider,
-
-                swift_Code = dto.swift_Code.ToUpper(),
-
+                payment_Provider = string.IsNullOrWhiteSpace(dto.payment_Provider) ? "SWIFT" : dto.payment_Provider,
+                swift_Code = dto.swift_Code.ToUpperInvariant(),
                 payment_Reference = dto.payment_Reference,
                 payment_Reason = dto.payment_Reason,
                 status = "Pending",
-                created_On = DateTime.Now
+                created_On = DateTime.UtcNow
             };
 
             _context.Payments.Add(payment);
@@ -100,31 +91,81 @@ namespace InternationalPaymentsAPI.Controllers
                 record_Id = payment.payment_Id,
                 new_Value = $"Amount: {payment.amount}, Converted: {payment.converted_Amount}, Provider: {payment.payment_Provider}, SWIFT: {payment.swift_Code}",
                 details = "Customer created a payment request.",
-                created_On = DateTime.Now
+                created_On = DateTime.UtcNow
             };
 
             _context.AuditLogs.Add(audit);
             await _context.SaveChangesAsync();
 
-            return Ok(new PaymentResponseDto
-            {
-                success = true,
-                message = "Payment created successfully.",
-                payment_Id = payment.payment_Id,
-                customer_Id = payment.customer_Id,
-                beneficiary_Id = payment.beneficiary_Id,
-                amount = payment.amount,
-                from_Currency = fromCurrency.currency_Code,
-                to_Currency = toCurrency.currency_Code,
-                exchange_Rate_Used = payment.exchange_Rate_Used,
-                converted_Amount = payment.converted_Amount,
-                status = payment.status
-            });
-
+            return Ok(ToPaymentResponse(payment, beneficiary, fromCurrency, toCurrency, true, "Payment created successfully."));
         }
+
+        [HttpPost("pay-now")]
+        public Task<IActionResult> PayNow(CreatePaymentDto dto) => CreatePayment(dto);
+
+        [HttpGet("customer/{customerId}")]
+        public async Task<IActionResult> GetPaymentsByCustomer(int customerId)
+        {
+            if (customerId != User.GetCustomerId())
+                return Forbid();
+
+            var payments = await _context.Payments
+                .Include(p => p.Beneficiary)
+                .Include(p => p.FromCurrency)
+                .Include(p => p.ToCurrency)
+                .Where(p => p.customer_Id == customerId)
+                .OrderByDescending(p => p.created_On)
+                .ToListAsync();
+
+            return Ok(payments.Select(p => ToPaymentResponse(p, p.Beneficiary, p.FromCurrency, p.ToCurrency)));
+        }
+
+        [HttpGet("{paymentId}")]
+        public async Task<IActionResult> GetPaymentById(int paymentId)
+        {
+            var payment = await _context.Payments
+                .Include(p => p.Beneficiary)
+                .Include(p => p.FromCurrency)
+                .Include(p => p.ToCurrency)
+                .FirstOrDefaultAsync(p => p.payment_Id == paymentId);
+
+            if (payment == null)
+                return NotFound(new { success = false, message = "Payment not found." });
+
+            if (payment.customer_Id != User.GetCustomerId())
+                return Forbid();
+
+            return Ok(ToPaymentResponse(payment, payment.Beneficiary, payment.FromCurrency, payment.ToCurrency));
+        }
+
+        [HttpGet("summary/customer/{customerId}")]
+        public async Task<IActionResult> GetPaymentSummaryByCustomer(int customerId)
+        {
+            if (customerId != User.GetCustomerId())
+                return Forbid();
+
+            var payments = await _context.Payments
+                .Where(p => p.customer_Id == customerId)
+                .ToListAsync();
+
+            return Ok(new
+            {
+                total_Payments = payments.Count,
+                total_Amount = payments.Sum(p => p.amount),
+                pending_Count = payments.Count(p => p.status == "Pending"),
+                under_Review_Count = payments.Count(p => p.status == "UnderReview" || p.status == "Verified"),
+                approved_Count = payments.Count(p => p.status == "Approved"),
+                rejected_Count = payments.Count(p => p.status == "Rejected"),
+                completed_Count = payments.Count(p => p.status == "Completed" || p.status == "SubmittedToSwift")
+            });
+        }
+
         [HttpGet("audit/customer/{customerId}")]
         public async Task<IActionResult> GetPaymentAuditByCustomerId(int customerId)
         {
+            if (customerId != User.GetCustomerId())
+                return Forbid();
+
             var auditLogs = await _context.AuditLogs
                 .Where(a => a.customer_Id == customerId && a.table_Name == "tblPayment")
                 .OrderByDescending(a => a.created_On)
@@ -143,6 +184,50 @@ namespace InternationalPaymentsAPI.Controllers
                 .ToListAsync();
 
             return Ok(auditLogs);
+        }
+
+        [HttpGet("my-payments")]
+        public async Task<IActionResult> GetMyPayments()
+        {
+            int customerId = User.GetCustomerId();
+            return await GetPaymentsByCustomer(customerId);
+        }
+
+        private static PaymentResponseDto ToPaymentResponse(
+            PaymentModel payment,
+            BeneficiaryModel? beneficiary,
+            CurrencyModel? fromCurrency,
+            CurrencyModel? toCurrency,
+            bool success = true,
+            string? message = null)
+        {
+            return new PaymentResponseDto
+            {
+                success = success,
+                message = message,
+                payment_Id = payment.payment_Id,
+                customer_Id = payment.customer_Id,
+                beneficiary_Id = payment.beneficiary_Id,
+                amount = payment.amount,
+                from_Currency = fromCurrency?.currency_Code ?? string.Empty,
+                to_Currency = toCurrency?.currency_Code ?? string.Empty,
+                exchange_Rate_Used = payment.exchange_Rate_Used,
+                converted_Amount = payment.converted_Amount,
+                beneficiary_Name = beneficiary?.beneficiary_Name,
+                recipient_Account_Number = beneficiary?.account_Number,
+                recipient_Bank_Name = beneficiary?.bank_Name,
+                swift_Code = payment.swift_Code,
+                payment_Reference = payment.payment_Reference,
+                payment_Provider = payment.payment_Provider,
+                payment_Reason = payment.payment_Reason,
+                status = payment.status,
+                created_On = payment.created_On,
+                updated_On = payment.updated_On,
+                verified_On = payment.verified_On,
+                submitted_To_Swift_On = payment.submitted_To_Swift_On,
+                rejected_On = payment.rejected_On,
+                rejection_Reason = payment.rejection_Reason
+            };
         }
     }
 }

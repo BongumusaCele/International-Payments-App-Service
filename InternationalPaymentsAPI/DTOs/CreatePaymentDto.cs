@@ -19,7 +19,8 @@ namespace InternationalPaymentsAPI.DTOs
         public string payment_Provider { get; set; } = "SWIFT";
 
         [Required(ErrorMessage = "SWIFT code is required")]
-        public string swift_Code { get; set; }
+        [RegularExpression(@"^[A-Z0-9]{8,11}$", ErrorMessage = "SWIFT code must be 8 to 11 uppercase letters/numbers.")]
+        public string swift_Code { get; set; } = string.Empty;
 
         public string? payment_Reason { get; set; }
     }
